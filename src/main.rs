@@ -359,25 +359,25 @@ fn main() {
                 // println!("14");
                 pc += 1;
             }
-                       15 => {
-                                // full‐program debug dump
-                                println!(
-                                    "DEBUG: PC @ 0x{:04x}, SP @ 0x{:04x}, Mem: 0x0 - 0x1000, instruction's value field: 0x{:08x}",
-                                    (pc * 4),
-                                    sp,
-                                    instr & 0x0FFFFFFF
-                                );
-                                pc += 1;
-                            }
-                            _ => {
-                                // catch any completely unrecognized opcodes
-                                eprintln!("error: impossible opcode {} at PC {}", opcode, pc);
-                                pc += 1;
-                            }
+            15 => {
+                // println!("15");
+                let value: i32 = ((instr << 4) as i32) >> 4;
+
+                // println!("value: {}", value);
+                // value.to_le_bytes().iter().for_each(|x| println!("{}", *x as char));
+                sp -= 4;
+
+                stack[sp..sp+4].copy_from_slice(&value.to_le_bytes());
+
+                // stack[sp..sp+4].iter().for_each(|x| println!("{:08b}", x));
+                // println!("current sp: {}", sp);
+
+                pc += 1;
+            }
+            _ => println!("Error, not an opcode: {}", opcode),
         }
 
     }
 
 }
-
 
