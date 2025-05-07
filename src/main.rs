@@ -3,13 +3,13 @@ use std::fs::File;
 use std::env::args;
 use std::process::exit;
 
-/// Sign‑extend a u32 `value` whose low `bits` bits are the real data.
+
 fn sign_extend(value: u32, bits: u8) -> i32 {
     let shift = 32 - bits as i32;
     ((value << shift) as i32) >> shift
 }
 
-/// Pop a 4‑byte little‑endian i32 from the stack and advance SP upward.
+
 fn pop_i32(stack: &[u8; 4096], sp: &mut usize) -> i32 {
     let raw = &stack[*sp..*sp + 4];
     let v = i32::from_le_bytes(raw.try_into().unwrap());
@@ -17,7 +17,7 @@ fn pop_i32(stack: &[u8; 4096], sp: &mut usize) -> i32 {
     v
 }
 
-/// Push a 4‑byte little‑endian i32 onto the stack, moving SP downward.
+
 fn push(stack: &mut [u8; 4096], sp: &mut usize, v: i32) {
     let bytes = v.to_le_bytes();
     *sp = sp.saturating_sub(4);
@@ -73,13 +73,13 @@ fn main() {
                     1 => {
                         let raw_from = (instr >> 12) & 0xFFF;
                         let raw_to   = instr         & 0xFFF;
-                        // sign‑extend and restore byte offset
+              
                         let off_from = (sign_extend(raw_from, 12) << 2) as isize;
                         let off_to   = (sign_extend(raw_to,   12) << 2) as isize;
-                        // compute addresses
+                
                         let addr_from = (sp as isize + off_from) as usize;
                         let addr_to   = (sp as isize + off_to)   as usize;
-                        // do the swap, byte‑by‑byte
+                  
                         for i in 0..4 {
                             stack.swap(addr_from + i, addr_to + i);
                         }
@@ -152,18 +152,18 @@ fn main() {
 
                     }
                            15 => {
-                                    // mask off the top 8 bits (4 for opcode + 4 for subcode) → keep bits [23:0]
+                                   
                                     let imm24 = instr & 0x00FF_FFFF;
-                                    // PC is an instruction‐index; multiply by 4 to get byte offset
+                                    
                                     let pc_byte = (pc * 4) as u32;
-                                    // SP is already a byte‐offset
+                                  
                                     let sp_byte = sp as u32;
                                     println!(
                                         "DEBUG: PC @ {:#06x}, SP @ {:#06x}, Mem: {:#x} - {:#x}, instruction's value field: {:#010x}",
                                         pc_byte,
                                         sp_byte,
-                                        0,       // start of memory
-                                        4096,    // end of memory
+                                        0,   
+                                        4096,    
                                         imm24
                                     );
                                 }
@@ -242,39 +242,38 @@ fn main() {
             }
             5 => {
                 // call
-                let raw   = (instr >> 2) & 0x03FF_FFFF;         // bits [27:2]
-                let delta = sign_extend(raw, 26) as isize;      // in *instructions*
-                // 1) push return‐address = byte‐offset of the *next* instr
+                let raw   = (instr >> 2) & 0x03FF_FFFF;        
+                let delta = sign_extend(raw, 26) as isize;      
+
                 let ret_addr = ((pc + 1) * 4) as i32;           
                 push(&mut stack, &mut sp, ret_addr);
-                // 2) jump relative (in instructions)
+
                 pc = (pc as isize + delta) as isize;            
             
             }
             6 => {
-                // return
-                // 1) free optional frame
+             
                 let framesize = ((instr >> 2) & 0x03FF_FFFF) as usize * 4;
                 sp = (sp + framesize).min(4096);
-                // 2) pop return‐address (in bytes)
+          
                 let ret_addr = pop_i32(&stack, &mut sp) as isize;
-                // 3) convert to instr‐index and jump
+             
                 pc = ret_addr / 4;
             }
             7 => {
-                // extract the 26‑bit signed offset (in instructions)
-                let raw   = (instr >> 2) & 0x03FF_FFFF;         // bits [27:2]
-                let delta = sign_extend(raw, 26) as isize;      // now a signed instruction‑count
-                // jump relative to the *current* pc
+              
+                let raw   = (instr >> 2) & 0x03FF_FFFF;       
+                let delta = sign_extend(raw, 26) as isize;      
+             
                 pc = (pc as isize + delta) as isize;            
             }
             8 => {
-                // 1) Decode condition (bits 27..25) and 23‑bit signed offset (bits 24..2)
+                
                 let cond  = ((instr >> 25) & 0b111)         as u8;
-                let imm   = (instr  >> 2)  & 0x007F_FFFF;  // mask 23 bits
-                let delta = sign_extend(imm, 23) as isize; // in instruction‐units
+                let imm   = (instr  >> 2)  & 0x007F_FFFF;  
+                let delta = sign_extend(imm, 23) as isize; 
 
-                // 2) Peek the two i32s: right at SP, left at SP+4
+                
                 let right = i32::from_le_bytes(
                 stack[sp    ..sp+4].try_into().unwrap()
                 );
@@ -282,7 +281,7 @@ fn main() {
                     stack[sp+4  ..sp+8].try_into().unwrap()
                 );
 
-                // 3) Evaluate
+            
                 let take = match cond {
                     0 => left == right,   // eq
                     1 => left != right,   // ne
@@ -293,12 +292,12 @@ fn main() {
                     _ => false,
                 };
 
-                // 4) Jump or fall‑through
+             
                 if take {
-                    // relative jump by delta instructions
+                   
                     pc = (pc as isize + delta) as isize;
                 } else {
-                    // next instruction
+                 
                     pc += 1;
                 }
     
@@ -346,16 +345,15 @@ fn main() {
                 pc += 1;
             }
             13 => {
-                // 1) Extract the 26‑bit signed stack‑relative offset field (bits 27..2)
-                let raw   = (instr >> 2) & 0x03FF_FFFF;        // mask off lower 26 bits
-                let off   = (sign_extend(raw, 26) << 2) as isize;  // in *bytes*
 
-                // 2) Compute the address to read the 4‑byte integer
+                let raw   = (instr >> 2) & 0x03FF_FFFF;        =
+                let off   = (sign_extend(raw, 26) << 2) as isize;  
+
+
                 let addr  = (sp as isize + off) as usize;
                 let word  = &stack[addr..addr + 4];
                 let value = i32::from_le_bytes(word.try_into().unwrap());
     
-                // 3) Format code is in the low two bits
                 let fmt = (instr & 0x3) as u8;
                 match fmt {
                     0 => println!("{}",      value),
