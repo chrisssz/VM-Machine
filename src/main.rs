@@ -359,19 +359,21 @@ fn main() {
                 // println!("14");
                 pc += 1;
             }
-            15 => {
-                println!(
-                            "DEBUG: PC @ 0x{:04x}, SP @ 0x{:04x}, Mem: 0x0 - 0x1000, instruction's value field: 0x{:08x}",
-                            (pc * 4),
-                            sp,
-                            instr & 0x0FFFFFFF
-                        );
-                        
-                    }
-                    _ => println!("error inmpossible subcode: {} {}", opcode, subcode),
-
-                }
-                pc += 1;
+                       15 => {
+                                // full‐program debug dump
+                                println!(
+                                    "DEBUG: PC @ 0x{:04x}, SP @ 0x{:04x}, Mem: 0x0 - 0x1000, instruction's value field: 0x{:08x}",
+                                    (pc * 4),
+                                    sp,
+                                    instr & 0x0FFFFFFF
+                                );
+                                pc += 1;
+                            }
+                            _ => {
+                                // catch any completely unrecognized opcodes
+                                eprintln!("error: impossible opcode {} at PC {}", opcode, pc);
+                                pc += 1;
+                            }
         }
 
     }
