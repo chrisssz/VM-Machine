@@ -151,9 +151,22 @@ fn main() {
                         // println!("af");
 
                     }
-                    15 => {
-                        println!("Debug Code: {}", (instr << 8) >> 8);
-                    }
+                           15 => {
+                                    // mask off the top 8 bits (4 for opcode + 4 for subcode) → keep bits [23:0]
+                                    let imm24 = instr & 0x00FF_FFFF;
+                                    // PC is an instruction‐index; multiply by 4 to get byte offset
+                                    let pc_byte = (pc * 4) as u32;
+                                    // SP is already a byte‐offset
+                                    let sp_byte = sp as u32;
+                                    println!(
+                                        "DEBUG: PC @ {:#06x}, SP @ {:#06x}, Mem: {:#x} - {:#x}, instruction's value field: {:#010x}",
+                                        pc_byte,
+                                        sp_byte,
+                                        0,       // start of memory
+                                        4096,    // end of memory
+                                        imm24
+                                    );
+                                }
                     _ => println!("error inmpossible subcode: {} {}", opcode, subcode),
 
                 }
